@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Energy Shoes</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #06080f;
+    --surface: #0d1120;
+    --surface2: #131929;
+    --border: #1c2a42;
+    --accent-volt: #c8ff00;
+    --accent-blue: #00b4ff;
+    --accent-orange: #ff7a00;
+    --accent-pink: #ff2d78;
+    --text: #e8edf5;
+    --muted: #4a5a78;
+    --glow-volt: 0 0 24px rgba(200,255,0,0.4);
+    --glow-blue: 0 0 24px rgba(0,180,255,0.4);
+  }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(200,255,0,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,255,0,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    animation: gridMove 20s linear infinite;
+    pointer-events: none; z-index: 0;
+  }
+  @keyframes gridMove {
+    0% { background-position: 0 0; }
+    100% { background-position: 48px 48px; }
+  }
+
+  /* Glow orbs */
+  .orb {
+    position: fixed; border-radius: 50%; filter: blur(100px);
+    pointer-events: none; z-index: 0; opacity: 0.12;
+  }
+  .orb1 { width: 500px; height: 500px; background: var(--accent-volt); top: -150px; left: -100px; }
+  .orb2 { width: 400px; height: 400px; background: var(--accent-blue); bottom: -100px; right: -100px; }
+
+  .app {
+    position: relative; z-index: 1;
+    max-width: 1100px; margin: 0 auto;
+    padding: 28px 20px 48px;
+  }
+
+  /* Header */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 36px;
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-icon {
+    width: 48px; height: 48px;
+    background: var(--accent-volt);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    box-shadow: var(--glow-volt);
+  }
+  .brand-text { }
+  .brand-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.1rem; font-weight: 700;
+    letter-spacing: 1px;
+    line-height: 1;
+    color: var(--text);
+  }
+  .brand-title span { color: var(--accent-volt); }
+  .brand-sub {
+    font-size: 0.72rem; color: var(--muted);
+    font-family: 'Orbitron', monospace;
+    letter-spacing: 2px; margin-top: 3px;
+  }
+
+  .status-bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.7rem; letter-spacing: 1px;
+    transition: all 0.4s;
+  }
+  .status-led {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--muted);
+    transition: all 0.3s;
+  }
+  .status-bar.connected { border-color: var(--accent-volt); color: var(--accent-volt); box-shadow: var(--glow-volt); }
+  .status-bar.connected .status-led { background: var(--accent-volt); box-shadow: 0 0 10px var(--accent-volt); animation: blink 2s infinite; }
+  .status-bar.connecting .status-led { background: var(--accent-orange); animation: blink 0.6s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  /* Tabs */
+  nav {
+    display: flex; gap: 2px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 4px;
+    margin-bottom: 28px;
+  }
+  .navbtn {
+    flex: 1; padding: 11px 14px;
+    background: none; border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem; font-weight: 500;
+    color: var(--muted); border-radius: 11px;
+    cursor: pointer; transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .navbtn.active { background: var(--surface2); color: var(--text); }
+  .navbtn:hover:not(.active) { color: var(--text); }
+
+  /* Panels */
+  .panel { display: none; animation: slideUp 0.3s ease; }
+  .panel.active { display: block; }
+  @keyframes slideUp { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ========= HERO ENERGY RING ========= */
+  .energy-hero {
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 28px; padding: 10px;
+  }
+  .ring-wrap {
+    position: relative; width: 200px; height: 200px;
+  }
+  .ring-svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--surface2); stroke-width: 10; }
+  .ring-fill {
+    fill: none; stroke: var(--accent-volt); stroke-width: 10;
+    stroke-linecap: round;
+    stroke-dasharray: 534;
+    stroke-dashoffset: 534;
+    filter: drop-shadow(0 0 8px var(--accent-volt));
+    transition: stroke-dashoffset 0.8s cubic-bezier(0.4,0,0.2,1);
+  }
+  .ring-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .ring-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem; letter-spacing: 2px; color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .ring-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 2.2rem; font-weight: 900;
+    color: var(--accent-volt);
+    line-height: 1;
+    text-shadow: var(--glow-volt);
+  }
+  .ring-unit { font-family: 'Orbitron', monospace; font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+
+  /* ========= METRIC GRID ========= */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  @media(max-width:640px) { .metrics-grid { grid-template-columns: 1fr 1fr; } }
+  @media(max-width:400px) { .metrics-grid { grid-template-columns: 1fr; } }
+
+  .mcard {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 18px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .mcard::after {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+  }
+  .mcard.steps::after { background: linear-gradient(90deg, var(--accent-blue), transparent); }
+  .mcard.calories::after { background: linear-gradient(90deg, var(--accent-orange), transparent); }
+  .mcard.distance::after { background: linear-gradient(90deg, var(--accent-pink), transparent); }
+
+  .mcard-icon { font-size: 1.6rem; margin-bottom: 10px; display: block; }
+  .mcard-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.6rem; letter-spacing: 2px; color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .mcard-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.8rem; font-weight: 700; line-height: 1;
+    margin-bottom: 4px;
+  }
+  .mcard.steps .mcard-val { color: var(--accent-blue); }
+  .mcard.calories .mcard-val { color: var(--accent-orange); }
+  .mcard.distance .mcard-val { color: var(--accent-pink); }
+  .mcard-unit { font-size: 0.72rem; color: var(--muted); font-family: 'Orbitron', monospace; }
+
+  .live-chip {
+    position: absolute; top: 14px; right: 14px;
+    background: rgba(200,255,0,0.12); border: 1px solid rgba(200,255,0,0.3);
+    color: var(--accent-volt);
+    font-family: 'Orbitron', monospace; font-size: 0.55rem; letter-spacing: 1.5px;
+    padding: 3px 8px; border-radius: 100px;
+    display: none;
+  }
+  .live-chip.show { display: block; animation: blink 2s infinite; }
+
+  /* Piezo bar graph */
+  .piezo-section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 20px;
+    margin-bottom: 20px;
+  }
+  .piezo-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .piezo-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.68rem; letter-spacing: 2px; color: var(--muted);
+  }
+  .piezo-live { font-family: 'Orbitron', monospace; font-size: 0.65rem; color: var(--accent-volt); }
+  .piezo-bars {
+    display: flex; align-items: flex-end; gap: 5px;
+    height: 72px;
+  }
+  .pbar {
+    flex: 1; background: var(--surface2); border-radius: 4px 4px 0 0;
+    border-bottom: 2px solid var(--accent-volt);
+    min-height: 4px;
+    transition: height 0.3s ease;
+    position: relative;
+  }
+  .pbar::after {
+    content: ''; position: absolute; inset: 0; border-radius: 4px 4px 0 0;
+    background: linear-gradient(to top, rgba(200,255,0,0.6), rgba(200,255,0,0.05));
+  }
+
+  /* ========= ACTION BUTTONS ========= */
+  .actions { display: flex; gap: 10px; margin-bottom: 20px; }
+  .btn {
+    flex: 1; display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px; padding: 13px 20px;
+    border: none; border-radius: 12px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px;
+  }
+  .btn-volt {
+    background: var(--accent-volt); color: #060810;
+    box-shadow: 0 4px 20px rgba(200,255,0,0.25);
+  }
+  .btn-volt:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(200,255,0,0.4); }
+  .btn-volt:disabled { opacity: 0.35; transform: none; cursor: not-allowed; }
+  .btn-ghost {
+    background: var(--surface); color: #f87171;
+    border: 1px solid rgba(239,68,68,0.3);
+  }
+  .btn-ghost:hover:not(:disabled) { background: rgba(239,68,68,0.1); }
+  .btn-ghost:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* Log */
+  .log-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 18px;
+  }
+  .log-head {
+    font-family: 'Orbitron', monospace; font-size: 0.65rem;
+    letter-spacing: 2px; color: var(--muted); margin-bottom: 12px;
+  }
+  #logFeed {
+    font-family: 'DM Sans', monospace; font-size: 0.72rem;
+    color: var(--muted); max-height: 130px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .le { display: flex; gap: 10px; }
+  .lt { color: var(--accent-blue); flex-shrink: 0; font-family: 'Orbitron', monospace; font-size: 0.65rem; }
+  .lm { }
+  .lm.ok { color: var(--accent-volt); }
+  .lm.err { color: #f87171; }
+
+  /* ========= CONNECT PANEL ========= */
+  .connect-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media(max-width:600px) { .connect-grid { grid-template-columns: 1fr; } }
+
+  .ccard {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 22px;
+  }
+  .ccard h3 {
+    font-family: 'Orbitron', monospace; font-size: 0.65rem;
+    letter-spacing: 2px; color: var(--muted); margin-bottom: 16px;
+  }
+  .ccard p { font-size: 0.83rem; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+
+  .device-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; max-height: 200px; overflow-y: auto; }
+  .ditem {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 10px;
+    cursor: pointer; transition: border-color 0.2s;
+  }
+  .ditem:hover { border-color: var(--accent-volt); }
+  .dname { font-weight: 600; font-size: 0.88rem; }
+  .did { font-family: 'Orbitron', monospace; font-size: 0.62rem; color: var(--muted); }
+  .darrow { color: var(--accent-volt); font-size: 0.8rem; }
+  .no-dev { text-align:center; padding:20px; color:var(--muted); font-size:0.8rem; font-family:'Orbitron',monospace; font-size:0.65rem; letter-spacing:1px; }
+
+  .stat-row {
+    padding: 12px 14px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: 10px;
+  }
+  .stat-key { font-family: 'Orbitron', monospace; font-size: 0.6rem; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 3px; }
+  .stat-val { font-weight: 600; font-size: 0.9rem; }
+
+  /* ========= GUIDE PANEL ========= */
+  .guide-steps { display: flex; flex-direction: column; gap: 14px; }
+  .gstep {
+    display: flex; gap: 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px;
+    align-items: flex-start;
+  }
+  .gnum {
+    width: 34px; height: 34px; flex-shrink: 0;
+    background: var(--accent-volt); color: #060810;
+    border-radius: 9px; display: flex;
+    align-items: center; justify-content: center;
+    font-family: 'Orbitron', monospace; font-weight: 700; font-size: 0.8rem;
+  }
+  .gcontent h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 6px; }
+  .gcontent p { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+  .codeblock {
+    margin-top: 12px; background: #02040a;
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px;
+    font-family: 'Orbitron', monospace; font-size: 0.68rem;
+    color: var(--accent-volt); line-height: 1.8; overflow-x: auto; white-space: pre;
+  }
+  .copybtn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; margin-top: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; font-family: 'Orbitron', monospace;
+    font-size: 0.6rem; color: var(--muted); cursor: pointer;
+    transition: all 0.2s; letter-spacing: 1px;
+  }
+  .copybtn:hover { color: var(--accent-volt); border-color: var(--accent-volt); }
+
+  .alert {
+    padding: 13px 16px; border-radius: 12px; margin-bottom: 18px;
+    font-size: 0.82rem; display: flex; gap: 10px; align-items: flex-start; line-height: 1.5;
+  }
+  .alert-warn { background: rgba(255,122,0,0.08); border: 1px solid rgba(255,122,0,0.25); color: #fdba74; }
+  .alert-volt { background: rgba(200,255,0,0.06); border: 1px solid rgba(200,255,0,0.2); color: #d4ff60; }
+
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+
+<div class="app">
+  <header>
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-text">
+        <div class="brand-title">SMART<span>SOLE</span></div>
+        <div class="brand-sub">PIEZO FITNESS TRACKER</div>
+      </div>
+    </div>
+    <div class="status-bar" id="statusBar">
+      <div class="status-led"></div>
+      <span id="statusTxt">DISCONNECTED</span>
+    </div>
+  </header>
+
+  <nav>
+    <button class="navbtn active" onclick="gotoTab('dash')">⚡ Dashboard</button>
+    <button class="navbtn" onclick="gotoTab('connect')">📡 Connect</button>
+    <button class="navbtn" onclick="gotoTab('guide')">📋 Setup Guide</button>
+  </nav>
+
+  <!-- ====== DASHBOARD ====== -->
+  <div class="panel active" id="tab-dash">
+    <div class="alert alert-warn" id="noConnAlert">
+      <span>⚠</span><span>ESP32 not connected. Use <strong>Demo Mode</strong> below or head to the <strong>Connect</strong> tab to pair your smart shoe.</span>
+    </div>
+
+    <!-- Energy Ring -->
+    <div class="energy-hero">
+      <div class="ring-wrap">
+        <svg class="ring-svg" viewBox="0 0 180 180">
+          <circle class="ring-bg" cx="90" cy="90" r="80"/>
+          <circle class="ring-fill" id="ringFill" cx="90" cy="90" r="80"/>
+        </svg>
+        <div class="ring-center">
+          <div class="ring-label">ENERGY</div>
+          <div class="ring-value" id="valEnergy">0.0</div>
+          <div class="ring-unit">mWh GENERATED</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 Metric Cards -->
+    <div class="metrics-grid">
+      <div class="mcard steps">
+        <span class="live-chip" id="lc1">● LIVE</span>
+        <span class="mcard-icon">👟</span>
+        <div class="mcard-label">STEPS</div>
+        <div class="mcard-val" id="valSteps">0</div>
+        <div class="mcard-unit">steps today</div>
+      </div>
+      <div class="mcard calories">
+        <span class="live-chip" id="lc2">● LIVE</span>
+        <span class="mcard-icon">🔥</span>
+        <div class="mcard-label">CALORIES</div>
+        <div class="mcard-val" id="valCalories">0.0</div>
+        <div class="mcard-unit">kcal burned</div>
+      </div>
+      <div class="mcard distance">
+        <span class="live-chip" id="lc3">● LIVE</span>
+        <span class="mcard-icon">📍</span>
+        <div class="mcard-label">DISTANCE</div>
+        <div class="mcard-val" id="valDist">0.00</div>
+        <div class="mcard-unit">km walked</div>
+      </div>
+    </div>
+
+    <!-- Piezo Signal Visualizer -->
+    <div class="piezo-section">
+      <div class="piezo-header">
+        <div class="piezo-title">⚡ PIEZO SIGNAL WAVEFORM</div>
+        <div class="piezo-live" id="piezoLive">WAITING...</div>
+      </div>
+      <div class="piezo-bars" id="piezoBars">
+        <!-- filled by JS -->
+      </div>
+    </div>
+
+    <!-- Demo Controls -->
+    <div class="actions">
+      <button class="btn btn-volt" id="demoBtn" onclick="startDemo()">▶ START DEMO</button>
+      <button class="btn btn-ghost" id="stopBtn" onclick="stopDemo()" disabled>■ STOP</button>
+    </div>
+
+    <!-- Log -->
+    <div class="log-panel">
+      <div class="log-head">// DATA LOG</div>
+      <div id="logFeed">
+        <div class="le"><span class="lt">00:00:00</span><span class="lm">System ready. Waiting for device...</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== CONNECT ====== -->
+  <div class="panel" id="tab-connect">
+    <div class="alert alert-volt">
+      <span>ℹ</span><span>Requires Chrome or Edge on desktop/Android. Ensure your ESP32 is powered on and advertising as <strong>SmartSole</strong>.</span>
+    </div>
+    <div class="connect-grid">
+      <div class="ccard">
+        <h3>// SCAN FOR DEVICE</h3>
+        <p>Click to discover nearby BLE devices. Your ESP32 running the SmartSole sketch will appear as <strong style="color:var(--accent-volt)">SmartSole</strong>.</p>
+        <button class="btn btn-volt" onclick="scanBLE()" style="width:100%">🔍 SCAN FOR ESP32</button>
+        <div class="device-list" id="devList"><div class="no-dev">NO SCAN PERFORMED YET</div></div>
+        <p style="font-size:0.65rem;font-family:'Orbitron',monospace;letter-spacing:1px;color:var(--muted);margin-top:10px;text-align:center;" id="btNote"></p>
+      </div>
+      <div class="ccard">
+        <h3>// CONNECTION INFO</h3>
+        <div class="stat-row">
+          <div class="stat-key">DEVICE NAME</div>
+          <div class="stat-val" id="ciName">—</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-key">STATUS</div>
+          <div class="stat-val" id="ciStatus" style="color:var(--muted)">Not connected</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-key">LAST PACKET</div>
+          <div class="stat-val" id="ciPacket" style="font-size:0.78rem;font-family:'Orbitron',monospace;color:var(--muted)">—</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-key">TOTAL ENERGY HARVESTED</div>
+          <div class="stat-val" style="color:var(--accent-volt)" id="ciEnergy">0.00 mWh</div>
+        </div>
+        <button class="btn btn-ghost" onclick="bleDisconnect()" id="discBtn" disabled style="width:100%;margin-top:4px;">⛔ DISCONNECT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== GUIDE ====== -->
+  <div class="panel" id="tab-guide">
+    <div class="guide-steps">
+
+      <div class="gstep">
+        <div class="gnum">1</div>
+        <div class="gcontent">
+          <h4>Install Arduino IDE + ESP32 Board Package</h4>
+          <p>Open Arduino IDE → Preferences → paste the URL below into "Additional Board Manager URLs", then install <strong>esp32 by Espressif</strong> from Board Manager.</p>
+          <div class="codeblock">https://dl.espressif.com/dl/package_esp32_index.json</div>
+        </div>
+      </div>
+
+      <div class="gstep">
+        <div class="gnum">2</div>
+        <div class="gcontent">
+          <h4>Wire Piezoelectric Sensors to ESP32</h4>
+          <p>Two piezo discs cover the heel and toe zones. Each connects through a signal conditioning circuit (rectifier + voltage divider) into ESP32 analog pins.</p>
+          <div class="codeblock">PIEZO SENSOR WIRING
+──────────────────────────────────
+Piezo (+) → Bridge Rectifier (+)
+Piezo (-) → Bridge Rectifier (-)
+Rectifier(+) → 10kΩ → GPIO34 (ADC)
+Rectifier(+) → 10kΩ → 3.3V clamp diode
+Rectifier(-) → GND
+
+Two sensors:
+  Heel Piezo → GPIO34 (ADC1_CH6)
+  Toe  Piezo → GPIO35 (ADC1_CH7)
+
+Battery charging:
+  Rectifier out → TP4056 module → LiPo</div>
+        </div>
+      </div>
+
+      <div class="gstep">
+        <div class="gnum">3</div>
+        <div class="gcontent">
+          <h4>Flash the SmartSole Arduino Sketch</h4>
+          <p>Copy the full sketch below. It reads both piezo channels, detects steps from pressure peaks, calculates energy, calories & distance, then notifies over BLE every 200ms.</p>
+          <div class="codeblock">#include &lt;BLEDevice.h&gt;
+#include &lt;BLEServer.h&gt;
+#include &lt;BLEUtils.h&gt;
+#include &lt;BLE2902.h&gt;
+
+// ─── BLE UUIDs ───────────────────────────────
+#define SVC_UUID  "aaaa1234-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+#define CHR_UUID  "bbbb1234-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+
+// ─── Piezo ADC pins ──────────────────────────
+#define PIEZO_HEEL  34
+#define PIEZO_TOE   35
+
+// ─── Thresholds & calibration ────────────────
+#define STEP_THRESHOLD   800   // ADC counts (0-4095)
+#define STEP_COOLDOWN_MS 350   // min ms between steps
+#define PIEZO_VCC        3.3f  // volts
+#define PIEZO_LOAD       10000 // ohms (load resistor)
+#define STEP_LENGTH_M    0.78f // avg stride metres
+#define CAL_PER_STEP     0.04f // kcal per step
+
+// ─── BLE objects ─────────────────────────────
+BLEServer*         pServer = nullptr;
+BLECharacteristic* pChar   = nullptr;
+bool               devConn  = false;
+
+// ─── Step & energy state ─────────────────────
+int      stepCount    = 0;
+float    energymWh    = 0.0f;
+unsigned long lastStepMs = 0;
+bool     inStep       = false;
+
+// ─── Energy calculation from peak voltage ────
+float calcEnergy(int adcRaw) {
+  float v    = (adcRaw / 4095.0f) * PIEZO_VCC;
+  float pW   = (v * v) / PIEZO_LOAD;        // Watts
+  float dtS  = STEP_COOLDOWN_MS / 1000.0f;  // seconds
+  return (pW * dtS * 1000.0f);              // mWh approx
+}
+
+class ConnCB : public BLEServerCallbacks {
+  void onConnect(BLEServer* s)    { devConn = true;  }
+  void onDisconnect(BLEServer* s) {
+    devConn = false;
+    BLEDevice::startAdvertising();
+  }
+};
+
+void setup() {
+  Serial.begin(115200);
+  analogReadResolution(12);           // 12-bit ADC
+  analogSetAttenuation(ADC_11db);     // 0-3.3V range
+
+  // BLE init
+  BLEDevice::init("SmartSole");
+  pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new ConnCB());
+
+  BLEService* pSvc = pServer->createService(SVC_UUID);
+  pChar = pSvc->createCharacteristic(
+    CHR_UUID,
+    BLECharacteristic::PROPERTY_NOTIFY
+  );
+  pChar->addDescriptor(new BLE2902());
+  pSvc->start();
+
+  BLEAdvertising* pAdv = BLEDevice::getAdvertising();
+  pAdv->addServiceUUID(SVC_UUID);
+  pAdv->setScanResponse(true);
+  pAdv->start();
+
+  Serial.println("SmartSole ready — advertising BLE");
+}
+
+void loop() {
+  int heel = analogRead(PIEZO_HEEL);
+  int toe  = analogRead(PIEZO_TOE);
+  int peak = max(heel, toe);           // dominant signal
+
+  unsigned long now = millis();
+
+  // ─── Step detection via pressure peak ───────
+  if (peak > STEP_THRESHOLD && !inStep && (now - lastStepMs) > STEP_COOLDOWN_MS) {
+    stepCount++;
+    energymWh += calcEnergy(peak);
+    lastStepMs = now;
+    inStep = true;
+    Serial.printf("STEP %d | heel=%d toe=%d | E=%.4f mWh\n",
+                  stepCount, heel, toe, energymWh);
+  }
+  if (peak < STEP_THRESHOLD * 0.5f) inStep = false;
+
+  // ─── Derived metrics ─────────────────────────
+  float calories = stepCount * CAL_PER_STEP;
+  float distKm   = (stepCount * STEP_LENGTH_M) / 1000.0f;
+
+  // ─── BLE packet: steps,cal,dist,energy,heel,toe ──
+  if (devConn) {
+    char buf[80];
+    snprintf(buf, sizeof(buf), "%d,%.2f,%.3f,%.4f,%d,%d",
+             stepCount, calories, distKm, energymWh, heel, toe);
+    pChar->setValue(buf);
+    pChar->notify();
+  }
+
+  delay(200);
+}</div>
+          <button class="copybtn" onclick="doCopy(this)">📋 COPY SKETCH</button>
+        </div>
+      </div>
+
+      <div class="gstep">
+        <div class="gnum">4</div>
+        <div class="gcontent">
+          <h4>Signal Conditioning Circuit</h4>
+          <p>Piezoelectric sensors produce AC voltage spikes. A bridge rectifier converts AC to DC, a voltage divider limits it to 3.3 V, and a Zener/clamp diode protects the ESP32 ADC pin from over-voltage.</p>
+          <div class="codeblock">Piezo disc
+    ┌──────────┐
+(+)─┤  4×1N4148├─(+DC)─┬──┐
+(-) ┤ Rectifier├─(GND)  │ 10kΩ
+    └──────────┘        │  │
+                      10kΩ GPIO34
+                        │
+                       GND
+
+Add 3.3V Zener across GPIO34-GND for protection.</div>
+        </div>
+      </div>
+
+      <div class="gstep">
+        <div class="gnum">5</div>
+        <div class="gcontent">
+          <h4>Pair & Monitor</h4>
+          <p>Power on the ESP32. In Chrome/Edge, go to the <strong>Connect</strong> tab → <strong>Scan for ESP32</strong> → select <strong>SmartSole</strong>. All four metrics will stream live to the Dashboard, including the energy ring showing mWh harvested.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────
+let bleDevice = null, bleChar = null, demoTimer = null;
+let demoSteps = 0, demoEnergy = 0;
+
+// ─── Init piezo bars ─────────────────────────────────
+const N_BARS = 32;
+const barsEl = document.getElementById('piezoBars');
+const bars = [];
+for (let i = 0; i < N_BARS; i++) {
+  const b = document.createElement('div');
+  b.className = 'pbar';
+  b.style.height = '4px';
+  barsEl.appendChild(b);
+  bars.push(b);
+}
+let barHistory = new Array(N_BARS).fill(0);
+
+function updateBars(val) {
+  barHistory.shift();
+  barHistory.push(val);
+  const max = Math.max(...barHistory, 1);
+  bars.forEach((b, i) => {
+    const h = Math.max(4, (barHistory[i] / max) * 68);
+    b.style.height = h + 'px';
+  });
+}
+
+// ─── Tab switching ───────────────────────────────────
+function gotoTab(id) {
+  document.querySelectorAll('.navbtn').forEach((b, i) =>
+    b.classList.toggle('active', ['dash','connect','guide'][i] === id));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+}
+
+// ─── Logging ─────────────────────────────────────────
+function addLog(msg, type = '') {
+  const feed = document.getElementById('logFeed');
+  const now = new Date().toTimeString().split(' ')[0];
+  const div = document.createElement('div');
+  div.className = 'le';
+  div.innerHTML = `<span class="lt">${now}</span><span class="lm ${type}">${msg}</span>`;
+  feed.appendChild(div);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+// ─── Update metrics ──────────────────────────────────
+function setMetrics(steps, cal, dist, energy, heel = 0, toe = 0) {
+  document.getElementById('valSteps').textContent = steps;
+  document.getElementById('valCalories').textContent = parseFloat(cal).toFixed(1);
+  document.getElementById('valDist').textContent = parseFloat(dist).toFixed(2);
+  document.getElementById('valEnergy').textContent = parseFloat(energy).toFixed(2);
+  document.getElementById('ciEnergy').textContent = parseFloat(energy).toFixed(3) + ' mWh';
+  document.getElementById('ciPacket').textContent = `${steps} steps | ${parseFloat(energy).toFixed(3)} mWh`;
+
+  // Ring — max goal 5 mWh
+  const pct = Math.min(parseFloat(energy) / 5, 1);
+  const circ = 2 * Math.PI * 80; // 502.65
+  document.getElementById('ringFill').style.strokeDashoffset = circ - pct * circ;
+
+  // Piezo bars
+  const signal = Math.max(parseInt(heel) || 0, parseInt(toe) || 0);
+  updateBars(signal);
+
+  ['lc1','lc2','lc3'].forEach(id => document.getElementById(id).classList.add('show'));
+  document.getElementById('piezoLive').textContent = `heel:${heel} toe:${toe}`;
+}
+
+// ─── Demo mode ───────────────────────────────────────
+function startDemo() {
+  if (demoTimer) return;
+  demoSteps = 0; demoEnergy = 0;
+  document.getElementById('demoBtn').disabled = true;
+  document.getElementById('stopBtn').disabled = false;
+  document.getElementById('noConnAlert').style.display = 'none';
+  setConnected('SmartSole (Demo)');
+  addLog('Demo started — simulating piezo data', 'ok');
+
+  demoTimer = setInterval(() => {
+    const stepDelta = Math.random() > 0.4 ? Math.floor(Math.random() * 3) + 1 : 0;
+    demoSteps += stepDelta;
+    const heelSim = stepDelta > 0 ? Math.floor(800 + Math.random() * 1200) : Math.floor(Math.random() * 200);
+    const toeSim  = stepDelta > 0 ? Math.floor(600 + Math.random() * 900)  : Math.floor(Math.random() * 150);
+    const peakSim = Math.max(heelSim, toeSim);
+    const energyStep = stepDelta > 0 ? ((peakSim / 4095) * 3.3) ** 2 / 10000 * 0.35 * 1000 : 0;
+    demoEnergy += energyStep;
+    const cal = (demoSteps * 0.04).toFixed(2);
+    const dist = (demoSteps * 0.00078).toFixed(3);
+    setMetrics(demoSteps, cal, dist, demoEnergy.toFixed(4), heelSim, toeSim);
+    if (stepDelta > 0) addLog(`Steps: ${demoSteps} | E: ${demoEnergy.toFixed(3)} mWh | H:${heelSim} T:${toeSim}`, 'ok');
+  }, 700);
+}
+
+function stopDemo() {
+  clearInterval(demoTimer); demoTimer = null;
+  document.getElementById('demoBtn').disabled = false;
+  document.getElementById('stopBtn').disabled = true;
+  setDisconnected();
+  ['lc1','lc2','lc3'].forEach(id => document.getElementById(id).classList.remove('show'));
+  document.getElementById('noConnAlert').style.display = 'flex';
+  document.getElementById('piezoLive').textContent = 'WAITING...';
+  addLog('Demo stopped');
+}
+
+// ─── Status helpers ──────────────────────────────────
+function setConnected(name) {
+  const sb = document.getElementById('statusBar');
+  sb.className = 'status-bar connected';
+  document.getElementById('statusTxt').textContent = name || 'CONNECTED';
+  document.getElementById('ciName').textContent = name || '—';
+  document.getElementById('ciStatus').textContent = 'Connected ✓';
+  document.getElementById('ciStatus').style.color = 'var(--accent-volt)';
+}
+function setConnecting() {
+  document.getElementById('statusBar').className = 'status-bar connecting';
+  document.getElementById('statusTxt').textContent = 'CONNECTING...';
+}
+function setDisconnected() {
+  document.getElementById('statusBar').className = 'status-bar';
+  document.getElementById('statusTxt').textContent = 'DISCONNECTED';
+  document.getElementById('ciName').textContent = '—';
+  document.getElementById('ciStatus').textContent = 'Not connected';
+  document.getElementById('ciStatus').style.color = 'var(--muted)';
+}
+
+// ─── Web Bluetooth ───────────────────────────────────
+async function scanBLE() {
+  if (!navigator.bluetooth) {
+    document.getElementById('btNote').textContent = '⚠ Web Bluetooth not supported. Use Chrome or Edge.';
+    addLog('Web Bluetooth not available in this browser', 'err'); return;
+  }
+  const listEl = document.getElementById('devList');
+  listEl.innerHTML = '<div class="no-dev">SCANNING...</div>';
+  addLog('Scanning for SmartSole BLE...');
+
+  try {
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ name: 'SmartSole' }],
+      optionalServices: ['aaaa1234-aaaa-aaaa-aaaa-aaaaaaaaaaaa']
+    });
+    listEl.innerHTML = '';
+    const item = document.createElement('div');
+    item.className = 'ditem';
+    item.innerHTML = `<div><div class="dname">${device.name}</div><div class="did">${device.id?.substring(0,14) || 'BLE'}...</div></div><span class="darrow">▶ CONNECT</span>`;
+    item.onclick = () => bleConnect(device);
+    listEl.appendChild(item);
+    addLog(`Found: ${device.name}`, 'ok');
+  } catch(e) {
+    listEl.innerHTML = '<div class="no-dev">NO DEVICE FOUND</div>';
+    if (!e.message.includes('cancel')) addLog('Scan error: ' + e.message, 'err');
+  }
+}
+
+async function bleConnect(device) {
+  try {
+    setConnecting();
+    addLog(`Connecting to ${device.name}...`);
+    document.getElementById('discBtn').disabled = false;
+    const server  = await device.gatt.connect();
+    const service = await server.getPrimaryService('aaaa1234-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+    bleChar = await service.getCharacteristic('bbbb1234-bbbb-bbbb-bbbb-bbbbbbbbbbbb');
+    await bleChar.startNotifications();
+    bleChar.addEventListener('characteristicvaluechanged', e => {
+      const raw = new TextDecoder().decode(e.target.value);
+      const [steps, cal, dist, energy, heel, toe] = raw.split(',');
+      setMetrics(steps, cal, dist, energy, heel, toe);
+      document.getElementById('noConnAlert').style.display = 'none';
+      addLog(`PKT: ${raw}`, 'ok');
+    });
+    bleDevice = device;
+    setConnected(device.name);
+    addLog(`Connected to ${device.name}!`, 'ok');
+    device.addEventListener('gattserverdisconnected', () => {
+      setDisconnected();
+      document.getElementById('discBtn').disabled = true;
+      document.getElementById('noConnAlert').style.display = 'flex';
+      addLog('Device disconnected', 'err');
+    });
+  } catch(e) {
+    setDisconnected();
+    addLog('Connection failed: ' + e.message, 'err');
+  }
+}
+
+function bleDisconnect() {
+  if (bleDevice?.gatt.connected) bleDevice.gatt.disconnect();
+  document.getElementById('discBtn').disabled = true;
+}
+
+// ─── Init ────────────────────────────────────────────
+window.onload = () => {
+  document.getElementById('btNote').textContent =
+    navigator.bluetooth ? '✓ Web Bluetooth supported in this browser.'
+                        : '⚠ Use Chrome or Edge for BLE support.';
+};
+</script>
+</body>
+</html>
